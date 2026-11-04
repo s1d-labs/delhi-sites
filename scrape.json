@@ -1,6 +1,6 @@
 {
   "family": "delhi-sites",
-  "about": "Delhi agency websites: every public page and document",
+  "about": "Delhi agency websites: every public page and document (Finance, Flood Control, Jal Board, Traffic Police, NDMC, Assembly, High Court, MoRTH and others)",
   "setup": [
     "pip install -r requirements.txt"
   ],

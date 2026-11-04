@@ -1,27 +1,46 @@
-"""What this family scrapes. Change this file first.
+"""What this family scrapes: every public page and document on the websites of Delhi agencies.
 
-FAMILY must equal the repo name (s1d-labs/<FAMILY>) and the family the hub owner added on scrape.s1d.me/runners.
-Each project is one queue of work on one site; `target` is the host it hits (the hub caps workers per target).
+One project per site, on the pool's India servers (geo="IN"). The queue starts at the home page and grows: crawl.py adds each new link it
+finds on the same site. Sites with a login, a captcha or a search form behind them are crawled only as far as plain links go.
 """
 import json
 from pathlib import Path
 
 FAMILY = json.loads((Path(__file__).parent / "scrape.json").read_text())["family"]
 
-PROJECTS = [
-    {
-        "name": f"{FAMILY}-books",              # project names: 2-64 chars of a-z 0-9 - _, start them with the family name
-        "title": "Books to Scrape catalogue",
-        "task": "crawl",                         # a task from scrape.json
-        "target": "books.toscrape.com",
-        "env": {"SITE": "https://books.toscrape.com"},
-        "probe": f"{FAMILY}:books.toscrape.com",
-        "unit_label": "page", "record_label": "book",
-        # the queue: one item per catalogue page; `expected` (records per item) gives progress and ETAs on the dashboard
-        "items": [{"key": f"page-{n}", "payload": {"url": f"https://books.toscrape.com/catalogue/page-{n}.html", "expected": 20}}
-                  for n in range(1, 51)],
-    },
+# slug, host, title, text that the home page always holds (for the health check)
+SITES = [
+    ("delhi", "delhi.gov.in", "Government of NCT of Delhi", "delhi"),
+    ("finance", "finance.delhi.gov.in", "Delhi Finance Department", "finance"),
+    ("ifc", "ifc.delhi.gov.in", "Delhi Irrigation and Flood Control", "flood"),
+    ("djb", "delhijalboard.delhi.gov.in", "Delhi Jal Board", "jal board"),
+    ("transport", "transport.delhi.gov.in", "Delhi Transport Department", "transport"),
+    ("ceo", "ceodelhi.gov.in", "Chief Electoral Officer, Delhi", "election"),
+    ("sec", "sec.delhi.gov.in", "State Election Commission, Delhi", "election"),
+    ("lokayukta", "lokayukta.delhi.gov.in", "Delhi Lokayukta", "lokayukta"),
+    ("vigilance", "vigilance.delhi.gov.in", "Delhi Directorate of Vigilance", "vigilance"),
+    ("home", "home.delhi.gov.in", "Delhi Home Department", "home"),
+    ("traffic", "traffic.delhipolice.gov.in", "Delhi Traffic Police", "traffic"),
+    ("police", "delhipolice.gov.in", "Delhi Police", "police"),
+    ("ndmc", "www.ndmc.gov.in", "New Delhi Municipal Council", "ndmc"),
+    ("tourism", "delhitourism.gov.in", "Delhi Tourism", "delhi"),
+    ("assembly", "delhiassembly.delhi.gov.in", "Delhi Legislative Assembly", "assembly"),
+    ("highcourt", "delhihighcourt.nic.in", "Delhi High Court public pages", "high court"),
+    ("morth", "morth.gov.in", "Ministry of Road Transport and Highways", "road"),
 ]
 
-# health checks the hub runs every minute; work for a project holds while its probe fails
-PROBES = [{"name": f"{FAMILY}:books.toscrape.com", "url": "https://books.toscrape.com/", "expect": "All products"}]
+PROJECTS = [
+    {
+        "name": f"{FAMILY}-{slug}",
+        "title": title,
+        "task": "crawl",
+        "target": host,
+        "env": {"SITE": host},
+        "probe": f"{FAMILY}:{host}",
+        "unit_label": "url", "record_label": "page or document",
+        "items": [{"key": "start", "payload": {"url": f"https://{host}/", "depth": 0}}],
+    }
+    for slug, host, title, _ in SITES
+]
+
+PROBES = [{"name": f"{FAMILY}:{host}", "url": f"https://{host}/", "expect": text} for _, host, _, text in SITES]

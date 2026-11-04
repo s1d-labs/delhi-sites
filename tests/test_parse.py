@@ -1,20 +1,29 @@
-"""Parsing tests on a saved page: fast, no network. Add a saved page for every layout your site has."""
 from pathlib import Path
 
-import crawl
+from sitecrawl import clean, kind, links, read, same_site
 
-PAGES = Path(__file__).parent / "pages"
-
-
-def test_catalogue_page_gives_twenty_books():
-    rows = crawl.parse((PAGES / "catalogue-page-1.html").read_text(encoding="utf-8"))
-    assert len(rows) == 20
-    rid, book = rows[0]
-    assert rid == "a-light-in-the-attic_1000"                       # the site's own id: stable across runs
-    assert book["title"] == "A Light in the Attic" and book["price"] == "£51.77" and book["availability"] == "In stock"
-    assert book["url"].startswith("https://books.toscrape.com/catalogue/")
-    assert len({r for r, _ in rows}) == 20                          # no duplicate ids on a page
+PAGE = (Path(__file__).parent / "pages/sample.html").read_text()
 
 
-def test_an_empty_page_gives_nothing():
-    assert crawl.parse("<html><body>No products</body></html>") == []
+def test_links():
+    got = links(PAGE, "https://example.delhi.gov.in/works/", "example.delhi.gov.in")
+    assert got == ["https://example.delhi.gov.in/a/b.pdf", "https://example.delhi.gov.in/works/list?page=2", "https://example.delhi.gov.in/viewer/report.pdf"]
+
+
+def test_read():
+    title, text = read(PAGE)
+    assert title == "Road & Works"
+    assert "Line one." in text and "var a" not in text
+
+
+def test_clean():
+    assert clean("HTTP://x.gov.in//a//b?z=1&a=2&utm_medium=q#f".replace("HTTP", "http")) == "https://x.gov.in/a/b?a=2&z=1"
+    assert clean("mailto:a@b") == ""
+
+
+def test_kind():
+    assert kind("https://x/a.PDF") == "doc" and kind("https://x/a.png") == "skip" and kind("https://x/a") == "page"
+
+
+def test_same_site():
+    assert same_site("www.ndmc.gov.in", "ndmc.gov.in") and same_site("a.ndmc.gov.in", "www.ndmc.gov.in") and not same_site("x.gov.in", "ndmc.gov.in")
