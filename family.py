@@ -29,6 +29,7 @@ SITES = [
     ("assembly", "delhiassembly.delhi.gov.in", "Delhi Legislative Assembly", "assembly"),
     ("highcourt", "delhihighcourt.nic.in", "Delhi High Court public pages", "high court"),
     ("morth", "morth.gov.in", "Ministry of Road Transport and Highways", "road"),
+    ("mcd", "mcdonline.nic.in", "Municipal Corporation of Delhi", "portal"),
     ("udd", "udd.delhi.gov.in", "Delhi Urban Development Department, with MLA fund orders", "urban"),
 ]
 # the MLA fund orders (MLALAD), listed by year on pages that a plain link crawl does not reach
@@ -43,7 +44,7 @@ PROJECTS = [
         "env": {"SITE": host},
         "probe": f"{FAMILY}:{host}",
         "unit_label": "url", "record_label": "page or document",
-        "items": [{"key": "start", "payload": {"url": f"https://{host}/", "depth": 0}}] + ([{"key": key_of(u), "payload": {"url": u, "depth": 12}} for u in UDD_ORDERS] if slug == "udd" else []),
+        "items": [{"key": "start", "payload": {"url": f"https://{host}/portal" if slug == "mcd" else f"https://{host}/", "depth": 0}}] + ([{"key": key_of(u), "payload": {"url": u, "depth": 12}} for u in UDD_ORDERS] if slug == "udd" else []),
         "workers": 2,
         "delay_ms": 2000 if slug == "udd" else 1000,
     }
