@@ -9,7 +9,7 @@ links on the same site.
 | Document (PDF, Word, Excel, KML, ZIP and others): address, name, size, SHA-256 | one record per address, the file in `docs/<sha>` in the bucket |
 
 - The sites answer from India, so the projects use `geo="IN"`: India pool servers only.
-- Pace: 2 workers per site, 1 request per second per worker. The Urban Development site has 1 worker and 1 request every 2 seconds. The hub's back-off applies.
+- Pace: 2 workers per site, 1 request per second per worker. The Urban Development site has 1 request every 2 seconds per worker. The hub's back-off applies.
 - No login, captcha or OTP is passed. Search forms are not filled. TLS checks stay on.
 - Photos, video, style sheets and scripts are not stored.
 

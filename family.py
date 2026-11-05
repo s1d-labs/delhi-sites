@@ -44,7 +44,7 @@ PROJECTS = [
         "probe": f"{FAMILY}:{host}",
         "unit_label": "url", "record_label": "page or document",
         "items": [{"key": "start", "payload": {"url": f"https://{host}/", "depth": 0}}] + ([{"key": key_of(u), "payload": {"url": u, "depth": 12}} for u in UDD_ORDERS] if slug == "udd" else []),
-        "workers": 1 if slug == "udd" else 2,
+        "workers": 2,
         "delay_ms": 2000 if slug == "udd" else 1000,
     }
     for slug, host, title, _ in SITES
