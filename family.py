@@ -6,6 +6,8 @@ finds on the same site. Sites with a login, a captcha or a search form behind th
 import json
 from pathlib import Path
 
+from sitecrawl import key_of
+
 FAMILY = json.loads((Path(__file__).parent / "scrape.json").read_text())["family"]
 
 # slug, host, title, text that the home page always holds (for the health check)
@@ -27,7 +29,10 @@ SITES = [
     ("assembly", "delhiassembly.delhi.gov.in", "Delhi Legislative Assembly", "assembly"),
     ("highcourt", "delhihighcourt.nic.in", "Delhi High Court public pages", "high court"),
     ("morth", "morth.gov.in", "Ministry of Road Transport and Highways", "road"),
+    ("udd", "udd.delhi.gov.in", "Delhi Urban Development Department, with MLA fund orders", "urban"),
 ]
+# the MLA fund orders (MLALAD), listed by year on pages that a plain link crawl does not reach
+UDD_ORDERS = [u for u in (Path(__file__).parent / "udd_orders.txt").read_text().split("\n") if u]
 
 PROJECTS = [
     {
@@ -38,7 +43,9 @@ PROJECTS = [
         "env": {"SITE": host},
         "probe": f"{FAMILY}:{host}",
         "unit_label": "url", "record_label": "page or document",
-        "items": [{"key": "start", "payload": {"url": f"https://{host}/", "depth": 0}}],
+        "items": [{"key": "start", "payload": {"url": f"https://{host}/", "depth": 0}}] + ([{"key": key_of(u), "payload": {"url": u, "depth": 12}} for u in UDD_ORDERS] if slug == "udd" else []),
+        "workers": 1 if slug == "udd" else 2,
+        "delay_ms": 2000 if slug == "udd" else 1000,
     }
     for slug, host, title, _ in SITES
 ]
