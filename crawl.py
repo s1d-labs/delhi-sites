@@ -59,6 +59,19 @@ def fetch(hub, s, url):
     return r, body
 
 
+def decode(body, declared):
+    """The body is already read, so the charset must come from these bytes: requests.apparent_encoding would read the response again."""
+    if declared and declared.lower() != "iso-8859-1":
+        try:
+            return body.decode(declared)
+        except (LookupError, UnicodeDecodeError):
+            pass
+    try:
+        return body.decode("utf-8")
+    except UnicodeDecodeError:
+        return body.decode("latin-1", "replace")
+
+
 def ext_of(url, ctype):
     e = urlsplit(url).path.rsplit("/", 1)[-1].rpartition(".")[2].lower()
     if 1 <= len(e) <= 5 and e.isalnum():
@@ -80,6 +93,44 @@ def main():
             seed_queue(PROJECT, fresh)
             fresh.clear()
 
+    def work(item, url, depth):
+        r, body = fetch(hub, s, url)
+        if r == "gone":
+            hub.complete([item["key"]], "done", fetched=0)
+            return
+        if r is None:
+            hub.complete([item["key"]], "failed", error="no page")
+            return
+        final = clean(r.url) or url
+        ctype = r.headers.get("content-type", "").split(";")[0].strip().lower()
+        rid = key_of(url)
+        sha = hashlib.sha256(body).hexdigest()
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if "html" in ctype and kind(url) == "page":
+            page = decode(body, r.encoding)
+            title, text = read(page)
+            got = links(page, final, SITE)
+            path = f"pages/{rid}.html.gz"
+            hub.upload_many([(path, gzip.compress(body), "application/gzip")])
+            hub.record(rid, {"type": "page", "url": url, "final_url": final, "title": title, "text": text[:TEXT_CAP], "text_len": len(text), "links": len(got), "file": path, "sha256": sha, "fetched_at": now, "depth": depth, "last_modified": r.headers.get("last-modified", "")})
+            if depth < MAX_DEPTH:
+                for u in got:
+                    k = key_of(u)
+                    p = urlsplit(u)
+                    paths[p.path] += 1
+                    if k in seen or (p.query and paths[p.path] > PER_PATH):
+                        continue
+                    seen.add(k)
+                    fresh.append({"key": k, "payload": {"url": u, "depth": depth + 1}})
+                if len(fresh) >= 200:
+                    send()
+        elif same_site(urlsplit(final).hostname or "", SITE) or kind(url) == "doc":
+            e = ext_of(url, ctype)
+            path = f"docs/{sha[:2]}/{sha}.{e}"
+            hub.upload_many([(path, body, ctype or "application/octet-stream")])
+            hub.record(rid, {"type": "document", "url": url, "final_url": final, "name": urlsplit(url).path.rsplit("/", 1)[-1][:200], "content_type": ctype, "bytes": len(body), "file": path, "sha256": sha, "fetched_at": now, "last_modified": r.headers.get("last-modified", "")})
+        hub.complete([item["key"]], "done", fetched=1)
+
     try:
         while time.time() < DEADLINE and not stop:
             if hub.settings.get("paused"):
@@ -90,43 +141,11 @@ def main():
                 break
             item = items[0]
             url, depth = item["payload"]["url"], item["payload"].get("depth", 0)
-            r, body = fetch(hub, s, url)
-            if r == "gone":
-                hub.complete([item["key"]], "done", fetched=0)
-                continue
-            if r is None:
-                hub.complete([item["key"]], "failed", error="no page")
-                continue
-            final = clean(r.url) or url
-            ctype = r.headers.get("content-type", "").split(";")[0].strip().lower()
-            rid = key_of(url)
-            sha = hashlib.sha256(body).hexdigest()
-            if "html" in ctype and kind(url) == "page":
-                if not r.encoding or r.encoding.lower() == "iso-8859-1":
-                    r.encoding = r.apparent_encoding or "utf-8"
-                page = body.decode(r.encoding or "utf-8", "replace")
-                title, text = read(page)
-                got = links(page, final, SITE)
-                path = f"pages/{rid}.html.gz"
-                hub.upload_many([(path, gzip.compress(body), "application/gzip")])
-                hub.record(rid, {"type": "page", "url": url, "final_url": final, "title": title, "text": text[:TEXT_CAP], "text_len": len(text), "links": len(got), "file": path, "sha256": sha, "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "depth": depth, "last_modified": r.headers.get("last-modified", "")})
-                if depth < MAX_DEPTH:
-                    for u in got:
-                        k = key_of(u)
-                        p = urlsplit(u)
-                        paths[p.path] += 1
-                        if k in seen or (p.query and paths[p.path] > PER_PATH):
-                            continue
-                        seen.add(k)
-                        fresh.append({"key": k, "payload": {"url": u, "depth": depth + 1}})
-                    if len(fresh) >= 200:
-                        send()
-            elif same_site(urlsplit(final).hostname or "", SITE) or kind(url) == "doc":
-                e = ext_of(url, ctype)
-                path = f"docs/{sha[:2]}/{sha}.{e}"
-                hub.upload_many([(path, body, ctype or "application/octet-stream")])
-                hub.record(rid, {"type": "document", "url": url, "final_url": final, "name": urlsplit(url).path.rsplit("/", 1)[-1][:200], "content_type": ctype, "bytes": len(body), "file": path, "sha256": sha, "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "last_modified": r.headers.get("last-modified", "")})
-            hub.complete([item["key"]], "done", fetched=1)
+            try:
+                work(item, url, depth)
+            except Exception as e:      # one bad page must not stop the crawl
+                hub.failure("bad-page", url, f"{type(e).__name__}: {e}"[:200])
+                hub.complete([item["key"]], "failed", error=type(e).__name__)
             time.sleep(max(.5, hub.settings.get("delay_ms", 0) / 1000))
         send()
         hub.close("finished" if not stop else "failed", "" if not stop else "stopped by signal")
