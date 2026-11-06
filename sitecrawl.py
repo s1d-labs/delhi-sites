@@ -39,12 +39,19 @@ def kind(url):
     return "doc" if ext in DOC else "skip" if ext in MEDIA else "page"
 
 
+def invented(url):
+    """Addresses a server answers whatever the path says: bas.aspx/a/b/c, or a/b/a/b/a/b from relative links."""
+    p = urlsplit(url).path
+    parts = [x.lower() for x in p.split("/") if x]
+    return bool(re.search(r"\.aspx?/", p, re.I)) or len(parts) > 12 or any(parts.count(x) >= 3 for x in set(parts))
+
+
 def links(page, base, site):
     """Addresses on this site that a crawl should visit next, in page order, once each."""
     seen, out = set(), []
     for m in HREF.findall(TAGS.sub(" ", page)):
         u = clean(m, base)
-        if not u or u in seen or TRAP.search(u) or not same_site(urlsplit(u).hostname, site) or kind(u) == "skip":
+        if not u or u in seen or TRAP.search(u) or invented(u) or not same_site(urlsplit(u).hostname, site) or kind(u) == "skip":
             continue
         seen.add(u)
         out.append(u)
