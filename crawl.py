@@ -6,9 +6,12 @@ import hashlib
 import os
 import signal
 import sys
+import tempfile
 import time
+from pathlib import Path
 from urllib.parse import urlsplit
 
+import certifi
 import requests
 
 from scrape_hub_client import HubClient, seed_queue
@@ -79,9 +82,21 @@ def ext_of(url, ctype):
     return {"application/pdf": "pdf", "text/csv": "csv", "application/zip": "zip"}.get(ctype, "bin")
 
 
+def trust():
+    """certifi plus the public intermediates in certs/ that some sites fail to send. Verification stays on."""
+    extra = sorted(Path(__file__).parent.glob("certs/*.pem"))
+    if not extra:
+        return True
+    with tempfile.NamedTemporaryFile("wb", suffix=".pem", delete=False) as f:
+        for p in [Path(certifi.where())] + extra:
+            f.write(p.read_bytes() + b"\n")
+    return f.name
+
+
 def main():
     hub = HubClient(PROJECT, job_index=int(os.environ.get("SCRAPE_JOB_INDEX", 0)), total_jobs=int(os.environ.get("SCRAPE_TOTAL_JOBS", 1)))
     s = requests.Session()
+    s.verify = trust()
     s.headers.update(HEADERS)
     signal.signal(signal.SIGINT, on_signal)
     signal.signal(signal.SIGTERM, on_signal)

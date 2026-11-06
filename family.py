@@ -31,6 +31,8 @@ SITES = [
     ("morth", "morth.gov.in", "Ministry of Road Transport and Highways", "road"),
     ("mcd", "mcdonline.nic.in", "Municipal Corporation of Delhi", "portal"),
     ("udd", "udd.delhi.gov.in", "Delhi Urban Development Department, with MLA fund orders", "urban"),
+    ("uttipec", "uttipec.org.in", "UTTIPEC, DDA road design body", "uttipec"),
+    ("dsiidc", "dsiidc.delhi.gov.in", "Delhi State Industrial and Infrastructure Development Corporation", "dsiidc"),
 ]
 # the MLA fund orders (MLALAD), listed by year on pages that a plain link crawl does not reach
 UDD_ORDERS = [u for u in (Path(__file__).parent / "udd_orders.txt").read_text().split("\n") if u]
