@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl, urldefrag, urlencode, urljoin, urlsplit, url
 DOC = {"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "csv", "zip", "rar", "7z", "kml", "kmz", "geojson", "shp", "txt", "rtf", "xml", "json"}
 MEDIA = {"jpg", "jpeg", "png", "gif", "svg", "webp", "ico", "bmp", "tif", "tiff", "mp4", "mp3", "avi", "wav", "webm", "mov", "css", "js", "woff", "woff2", "ttf", "eot", "map"}
 # links that repeat a page for ever or that are actions, not content
-TRAP = re.compile(r"/(calendar|login|logout|signin|signup|register|user/|admin|wp-admin|print|share|feed|cart|captcha)\b|[?&](print|share|sort|order|lang|replytocom|destination|ical|date|month|year)=|mailto:|tel:|javascript:", re.I)
+TRAP = re.compile(r"/wp-json/|/author/|/blog/page/|[?&]p=\d|/(calendar|login|logout|signin|signup|register|user/|admin|wp-admin|print|share|feed|cart|captcha)\b|[?&](print|share|sort|order|lang|replytocom|destination|ical|date|month|year)=|mailto:|tel:|javascript:", re.I)
 DROP_QUERY = re.compile(r"^(utm_.*|fbclid|gclid|sessionid|sid|phpsessid|jsessionid|ref|from)$", re.I)
 TAGS = re.compile(r"<(script|style|noscript|svg)\b.*?</\1>|<!--.*?-->", re.I | re.S)
 HREF = re.compile(r"""<(?:a|area|iframe|embed|object|link)\b[^>]*?\b(?:href|src|data)\s*=\s*["']?([^"'\s>]+)""", re.I)
