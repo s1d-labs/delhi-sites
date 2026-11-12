@@ -1,3 +1,6 @@
+> **Merged into [s1d-labs/city-sites](https://github.com/s1d-labs/city-sites) on 2026-11-12.** This repository is archived. The Delhi
+> projects keep their names (`delhi-sites-<slug>`) and their data; their code is now `DELHI` in city-sites `family.py`.
+
 # delhi-sites: every public page and document of Delhi agency websites
 
 A family of the s1d-labs scrape pool. One project per site (`family.py`). The queue starts at the home page and grows as the crawl finds new
